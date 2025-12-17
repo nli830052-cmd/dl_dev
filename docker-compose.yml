@@ -1,0 +1,41 @@
+# Docker Compose 파일 형식 버전을 지정합니다. '3.8' 이상을 권장합니다.
+version: '3.8'
+
+# services는 실행할 컨테이너들의 묶음입니다.
+services:
+  # 서비스의 이름을 'pytorch-cuda-dev'로 지정합니다. 이 이름이 컨테이너 이름의 일부가 됩니다.
+  pytorch-cuda-dev:
+    # build: 현재 디렉토리('.')의 Dockerfile을 사용하여 이미지를 빌드하라는 의미입니다.
+    build: .
+    # ports: 호스트와 컨테이너의 포트를 연결합니다.
+    # "8888:8888" -> 호스트의 8888번 포트로 들어오는 요청을 컨테이너의 8888번 포트로 전달합니다.
+    # 이를 통해 웹 브라우저에서 localhost:8888로 JupyterLab에 접속할 수 있습니다.
+    ports:
+      - "8888:8888"
+      - "6006:6006"
+    # volumes: 호스트의 폴더를 컨테이너의 폴더에 연결(마운트)합니다.
+    # 이를 통해 컨테이너가 종료되어도 작업 내용이 보존되고, 호스트에서 코드를 수정하면 컨테이너에 즉시 반영됩니다.
+    volumes:
+      #우리가 직접 관리하는 Volumne
+      # 호스트의 현재 폴더(./src)를 컨테이너의 /workspace/src 폴더에 연결합니다.
+      # 소스 코드를 저장할 공간입니다.
+      - ./src:/workspace/src
+      # Hugging Face 모델 등 대용량 파일을 저장할 캐시 폴더를 연결합니다.
+      # 모델을 다시 다운로드하는 것을 방지하여 시간을 절약합니다.
+      - ./cache/huggingface:/root/.cache/huggingface
+    # environment: 컨테이너 내부에서 사용할 환경 변수를 설정합니다.
+    environment:
+      - JUPYTER_ENABLE_LAB=yes
+      # Hugging Face 라이브러리가 캐시를 저장할 경로를 위 볼륨 경로와 일치시킵니다.
+      - TRANSFORMERS_CACHE=/root/.cache/huggingface
+    # deploy: 서비스 배포와 관련된 설정을 정의합니다. GPU 사용을 위해 필수적입니다.
+    deploy:
+      resources:
+        reservations:
+          devices:
+            # driver: nvidia -> NVIDIA GPU 드라이버를 사용하도록 지정합니다.
+            - driver: nvidia
+              # count: all -> 시스템에 있는 모든 GPU를 컨테이너에 할당합니다.
+              count: all
+              # capabilities: [gpu] -> 컨테이너가 GPU 기능을 사용할 수 있도록 허용합니다.
+              capabilities: [ gpu ]
